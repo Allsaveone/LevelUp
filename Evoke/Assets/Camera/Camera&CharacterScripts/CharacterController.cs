@@ -133,7 +133,7 @@ public class CharacterController : MonoBehaviour {
 
     void Strafe()
     {
-		Debug.Log ("Turn");
+		//Debug.Log ("Turn");
         if (Mathf.Abs(turnInput) > inputSetting.inputDelay)
         {
             //move
