@@ -19,9 +19,9 @@ public class StandardCamera : MonoBehaviour
         public bool smoothFollow = true;
         public float smooth = 0.05f;
 
-        [HideInInspector]
+        //[HideInInspector]
         public float newDistance = -8; //set by zoom input
-        [HideInInspector]
+       // [HideInInspector]
         public float adjustmentDistance = -8;
     }
 
@@ -201,7 +201,7 @@ public class StandardCamera : MonoBehaviour
     {
         position.newDistance += position.zoomStep * zoomInput;
 
-        position.distanceFromTarget = Mathf.Lerp(position.distanceFromTarget, position.newDistance, position.zoomSmooth * Time.deltaTime);
+        position.distanceFromTarget = Mathf.Lerp(position.distanceFromTarget, position.newDistance, position.zoomSmooth * Time.deltaTime); 
 
         if (position.distanceFromTarget > position.maxZoom)
         {

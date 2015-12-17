@@ -1,8 +1,8 @@
 ﻿/// <summary>
 /// Senses
-/// Basic senses for TSS prototype
+/// Basic senses for NpcAi - personal use
 /// David ONeill
-/// 3/10/15
+/// 10/12/15
 /// </summary>
 using UnityEngine;
 using System.Collections;
@@ -19,16 +19,13 @@ public class Senses : MonoBehaviour {
 		Bot
 	};
 	public targetType typeOfTarget;
-	public GameObject target;
+	public LayerMask detectionMask;
+	public GameObject senseTarget;
 
 	public float fieldOfView = 160.0f;
 	public bool targetInSight;
-	public Vector3 lastSighting;
 
-	private Vector3 _resetSight = new Vector3(1000.0f,1000.0f,1000.0f);
-//	private Vector3 _previousSighting = new Vector3(1000.0f,1000.0f,1000.0f);
-
-	public SphereCollider col;
+	private SphereCollider col;
 	float radius;
 	NavMeshAgent nav;
 	//Animator anim; //need these later
@@ -43,37 +40,33 @@ public class Senses : MonoBehaviour {
 		nav = GetComponent<NavMeshAgent> ();
 		//anim = GetComponent<Animator> ();
 		ai = GetComponent<NpcAi> ();
-		target = null;
-
-		lastSighting = _resetSight;
-//		_previousSighting = _resetSight;
-
+		senseTarget = null;
 	}
 	//Make a custom Update -Invoke
 	void Update()
 	{
-//		if(lastSighting != _previousSighting) 
-//		{
-//			Debug.Log ("target has moved");
-//		}
-//		_previousSighting = _resetSight;
+
 	}
 
 	void ClearTarget() // Call this to go back to normal behaviour.
 	{
-		target = null;
+		senseTarget = null;
+		targetInSight = false;
+		senseTarget = null;
+		ai.targeting = false;
 		ai.myTarget = null;
-		ai.currentState = NpcAi.State.Idle;
 	}
 
 	//Entering Detection Sphere
 	void OnTriggerStay(Collider other)
 	{
-		if(other.gameObject.tag == "Player" && ai.currentState != NpcAi.State.Init)
+		// Timer for additional optisation?
+		if(other.gameObject.tag == typeOfTarget.ToString() && ai.currentState != NpcAi.State.Init)
 		{
-			//if(ai.currentState == NpcAi.State.Idle ||ai.currentState == NpcAi.State.Patrol || ai.currentState == NpcAi.State.Chase || ai.currentState == NpcAi.State.Investigate)
-			//{
+			if(ai.currentState == NpcAi.State.Idle ||ai.currentState == NpcAi.State.Patrol || ai.currentState == NpcAi.State.Chase || ai.currentState == NpcAi.State.Investigate || ai.currentState == NpcAi.State.Attack)
+			{
 				targetInSight = false;
+
 				Vector3 direction = other.transform.position - transform.position;
 				float angle = Vector3.Angle(direction,transform.forward);
 				
@@ -82,62 +75,57 @@ public class Senses : MonoBehaviour {
 				{
 					RaycastHit hit;
 
-					if(Physics.Raycast(transform.position + transform.forward,direction.normalized, out hit,col.radius))
+					if(Physics.Raycast(transform.position + transform.up,direction.normalized, out hit,col.radius,detectionMask))
 					{
 						if(hit.collider.gameObject.tag == typeOfTarget.ToString())
-						{
+						{					
 							targetInSight = true;
-							Debug.DrawRay(transform.position + transform.up,direction.normalized,Color.red,1.0f); 
-							lastSighting = hit.transform.position;
-							//_previousSighting = hit.transform.position;
-							
+							Debug.DrawLine (transform.position, hit.transform.position, Color.red, 0.1f, true);
+
 							if(ai.myTarget == null)
 							{
-//								target = hit.transform.gameObject;
-//
-//								ai.SetTarget(target); // needs work!!!!!!!!!
-//								Debug.Log ("Target Aquired!");
+								senseTarget = hit.transform.gameObject;
+								ai.SetTarget(senseTarget);
+								//Debug.Log ("Target Aquired!");
 							} 
-
+						}
+						else
+						{
+							if(senseTarget != null && targetInSight == false)
+							{
+								//Line of sight has been broken! 
+								//ClearTarget();
+								//ai.GoInvestigate(other.transform.position);
+							}
 						}
 					}
 				}
 				//Hearing
-				if(ai.currentState != NpcAi.State.Chase && ai.currentState != NpcAi.State.Attack)//they are effectivly deaf when engaging an enemy
-				{
-					if(CalculatePathLength(other.transform.position) <= col.radius /2) //back here later
-					{
-						ai.pointOfInterest = other.transform.position;
-						ai.currentTime = 5f;
-						ai.currentState = NpcAi.State.Investigate;
-						Debug.Log ("Heard the Player!!");
-						//Debug.DrawRay(transform.position + transform.up,direction.normalized,Color.red,1.0f); 
-						//lastSighting = other.transform.position;
-					}
-				}
-				
-
-			//}
+//				if(ai.currentState != NpcAi.State.Chase && ai.currentState != NpcAi.State.Attack)//they are effectivly deaf when engaging an enemy
+//				{
+//					if(CalculatePathLength(other.transform.position) <= col.radius /2) //back here later
+//					{
+//						//ai.GoInvestigate(other.transform.position);
+//						//Debug.Log ("Heard the Player!!"); //Carefull here, requires externa critera for solid logic gate
+//					}
+//				}
+			}//State Logic gate end
 		}
 	}
+
 	//Leaving Detection Sphere
 	void OnTriggerExit(Collider other)
 	{
-		if(other.gameObject.tag == "Player")
+		if(other.gameObject.tag == typeOfTarget.ToString())
 		{
-			Debug.Log ("Lost Player");
-			if(target !=  null)
+			//Debug.Log ("Lost Target");
+			if(senseTarget !=  null)
 			{
-				lastSighting = other.transform.position;
-				ai.pointOfInterest = lastSighting;
-				ai.currentTime = 5f;
-				ai.currentState = NpcAi.State.Investigate;
-//				_previousSighting = lastSighting;
-				lastSighting = _resetSight;
+				ai.GoInvestigate(other.transform.position);
 			}
 
 			targetInSight = false;
-			target = null;
+			senseTarget = null;
 			ai.targeting = false;
 			ai.myTarget = null;
 		}
