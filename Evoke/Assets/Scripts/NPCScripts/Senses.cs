@@ -24,11 +24,11 @@ public class Senses : MonoBehaviour {
 
 	public float fieldOfView = 160.0f;
 	public bool targetInSight;
-
+	public bool grounded;
 	private SphereCollider col;
 	float radius;
 	NavMeshAgent nav;
-	//Animator anim; //need these later
+	Animator anim; //need these later
 	NpcAi ai;
 
 	void Awake()
@@ -38,14 +38,54 @@ public class Senses : MonoBehaviour {
 		col.isTrigger = true;
 
 		nav = GetComponent<NavMeshAgent> ();
-		//anim = GetComponent<Animator> ();
+		anim = GetComponentInChildren<Animator> ();
 		ai = GetComponent<NpcAi> ();
 		senseTarget = null;
+
+		InvokeRepeating ("GroundedCheck", 0.1f, 0.1f);
 	}
 	//Make a custom Update -Invoke
 	void Update()
 	{
 
+	}
+
+	void GroundedCheck()
+	{
+		Ray ray = new Ray (transform.position, Vector3.down);
+		RaycastHit hit;
+
+		if (Physics.Raycast (ray, out hit, 1.25f))
+		{
+			grounded = true;
+			Debug.DrawLine (transform.position, hit.point);
+			if(nav.enabled == false)
+			{
+//				nav.enabled = true;
+//				ai.enabled = true;
+				anim.SetBool ("Grounded", true);
+				StartCoroutine ("LandRecovery");
+			}
+		} 
+		else 
+		{
+			grounded = false;
+
+			if(nav.enabled == true)
+			{
+				nav.enabled = false;
+				ai.enabled = false;
+				anim.SetBool ("Grounded", false);
+
+			}
+		}	
+	}
+
+	IEnumerator LandRecovery()
+	{
+		yield return new WaitForSeconds (0.5f);
+		nav.enabled = true;
+		ai.enabled = true;
 	}
 
 	void ClearTarget() // Call this to go back to normal behaviour.
@@ -57,7 +97,7 @@ public class Senses : MonoBehaviour {
 		ai.myTarget = null;
 	}
 
-	//Entering Detection Sphere
+	//Entering Detection Sphere - switch to Physics.overlapshpere?
 	void OnTriggerStay(Collider other)
 	{
 		// Timer for additional optisation?
